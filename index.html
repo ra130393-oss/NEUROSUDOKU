@@ -1,1 +1,388 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku Neuroeducativo - Estimulação Cognitiva</title>
+    <style>
+        :root {
+            --bg-app: #f4f7fe;
+            --bg-card: #ffffff;
+            --text-main: #2d3748;
+            --primary: #5c6bc0;
+            --primary-hover: #4755b6;
+            --accent-cyan: #26c6da;
+            --accent-purple: #ab47bc;
+            --correct-green: #2e7d32;
+            --error-red: #c62828;
+            --border-grid: #7986cb;
+            --font-size-cell: 28px;
+        }
 
+        [data-theme="dark"] {
+            --bg-app: #121826;
+            --bg-card: #1e293b;
+            --text-main: #f8fafc;
+            --primary: #7986cb;
+            --primary-hover: #9fa8da;
+            --accent-cyan: #4dd0e1;
+            --accent-purple: #ba68c8;
+            --border-grid: #9fa8da;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-app);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            max-width: 500px;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        p.instructions {
+            font-size: 1.2rem;
+            line-height: 1.5;
+        }
+
+        .accessibility-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .btn-acc {
+            background: var(--bg-card);
+            border: 2px solid var(--primary);
+            color: var(--text-main);
+            padding: 10px 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .main-card {
+            background: var(--bg-card);
+            border-radius: 24px;
+            padding: 25px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 460px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Grade do Sudoku Acessível (4x4 para experiência acolhedora e fluida) */
+        .sudoku-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0;
+            border: 4px solid var(--border-grid);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 25px;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+        }
+
+        .cell {
+            background: var(--bg-card);
+            border: 1px solid #cbd5e1;
+            font-size: var(--font-size-cell);
+            font-weight: bold;
+            text-align: center;
+            color: var(--text-main);
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .cell:focus {
+            background: #e0f7fa;
+            border: 3px solid var(--accent-cyan);
+        }
+
+        /* Linhas divisórias internas dos quadrantes 4x4 */
+        .cell:nth-child(2n) { border-right: 3px solid var(--border-grid); }
+        .cell:nth-child(md) { border-bottom: 3px solid var(--border-grid); }
+        tr-row-2 .cell { border-bottom: 3px solid var(--border-grid); }
+        
+        /* Ajuste específico para as bordas do bloco 4x4 */
+        .sudoku-grid input:nth-child(4n) { border-right: none; }
+        .sudoku-grid input:nth-child(n+13) { border-bottom: none; }
+        .sudoku-grid input:nth-child(5), 
+        .sudoku-grid input:nth-child(6), 
+        .sudoku-grid input:nth-child(7), 
+        .sudoku-grid input:nth-child(8) {
+            border-bottom: 3px solid var(--border-grid);
+        }
+
+        .cell.fixed {
+            background: rgba(0, 0, 0, 0.04);
+            color: var(--primary);
+            cursor: not-allowed;
+        }
+
+        [data-theme="dark"] .cell.fixed {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--accent-cyan);
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 15px 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background-color: var(--primary); }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-accent { background-color: var(--accent-purple); }
+        .btn-full { grid-column: span 2; background-color: #718096; }
+
+        .feedback {
+            font-size: 1.3rem;
+            font-weight: bold;
+            text-align: center;
+            min-height: 40px;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 12px;
+            width: 100%;
+        }
+
+        .feedback.success { color: var(--correct-green); background: #e8f5e9; }
+        .feedback.error { color: var(--error-red); background: #ffebee; }
+        .feedback.info { color: var(--primary); background: #e8eaf6; }
+
+        /* Estilo idoso-friendly para aumentar tamanho da fonte */
+        .large-text {
+            --font-size-cell: 36px;
+        }
+        .large-text h1 { font-size: 2.6rem; }
+        .large-text .instructions { font-size: 1.4rem; }
+        .large-text .btn { font-size: 1.4rem; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Sudoku Neuroativo</h1>
+        <p class="instructions">Complete a grade usando números de 1 a 4 sem repetir nas linhas, colunas ou blocos!</p>
+    </header>
+
+    <div class="accessibility-bar">
+        <button class="btn-acc" onclick="toggleTheme()" aria-label="Alternar modo escuro">
+            🌓 Modo Escuro
+        </button>
+        <button class="btn-acc" onclick="toggleTextSize()" aria-label="Aumentar tamanho do texto">
+            aa+ Ampliar Fonte
+        </button>
+    </div>
+
+    <main class="main-card">
+        <div class="sudoku-grid" id="sudoku-board">
+            </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="verifyGame()">✅ Verificar</button>
+            <button class="btn btn-accent" onclick="getHint()">💡 Dica</button>
+            <button class="btn btn-full" onclick="initGame()">🔄 Reiniciar Jogo</button>
+        </div>
+
+        <div id="feedback-message" class="feedback"></div>
+    </main>
+
+    <script>
+        const audioPath = 'assets/audio/';
+        const sounds = {
+            success: new Audio(`${audioPath}sucesso.mp3`),
+            error: new Audio(`${audioPath}erro.mp3`),
+            click: new Audio(`${audioPath}click.mp3`),
+            hint: new Audio(`${audioPath}dica.mp3`)
+        };
+
+        function playSound(type) {
+            if(sounds[type]) {
+                sounds[type].currentTime = 0;
+                sounds[type].play().catch(() => {/* Evita erro se o usuário não interagiu ainda */});
+            }
+        }
+    </script>
+
+    <script>
+        // Gabarito do Sudoku 4x4 estável e balanceado
+        const solution = [
+            1, 2, 3, 4,
+            3, 4, 1, 2,
+            2, 3, 4, 1,
+            4, 1, 2, 3
+        ];
+
+        // Máscara inicial (0 representa campo vazio para preenchimento)
+        const initialMap = [
+            1, 0, 3, 0,
+            0, 4, 0, 2,
+            2, 0, 4, 0,
+            0, 1, 0, 3
+        ];
+
+        function initGame() {
+            playSound('click');
+            const board = document.getElementById('sudoku-board');
+            board.innerHTML = '';
+            clearFeedback();
+
+            initialMap.forEach((val, index) => {
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.min = 1;
+                input.max = 4;
+                input.className = 'cell';
+                input.setAttribute('data-index', index);
+                input.setAttribute('inputmode', 'numeric'); // Abre teclado numérico no celular
+
+                if (val !== 0) {
+                    input.value = val;
+                    input.classList.add('fixed');
+                    input.disabled = true;
+                } else {
+                    input.value = '';
+                }
+
+                // Sanitização e validação em tempo real para facilitar o uso
+                input.addEventListener('input', (e) => {
+                    if (e.target.value.length > 1) e.target.value = e.target.value.slice(-1);
+                    if (!['1','2','3','4'].includes(e.target.value)) e.target.value = '';
+                });
+
+                board.appendChild(input);
+            });
+        }
+
+        function verifyGame() {
+            const cells = document.querySelectorAll('.cell');
+            let isComplete = true;
+            let isCorrect = true;
+
+            cells.forEach((cell, index) => {
+                const val = parseInt(cell.value);
+                if (isNaN(val)) {
+                    isComplete = false;
+                } else if (val !== solution[index]) {
+                    isCorrect = false;
+                }
+            });
+
+            const fb = document.getElementById('feedback-message');
+            if (!isComplete) {
+                fb.textContent = "Continue tentando! Ainda há espaços em branco. 🧠";
+                fb.className = "feedback info";
+                playSound('error');
+            } else if (!isCorrect) {
+                fb.textContent = "Alguns números não estão no lugar certo. Revise com calma! ✨";
+                fb.className = "feedback error";
+                playSound('error');
+            } else {
+                fb.textContent = "Parabéns! Excelente exercício para o seu cérebro! 🎉🏆";
+                fb.className = "feedback success";
+                playSound('success');
+            }
+        }
+
+        function getHint() {
+            playSound('hint');
+            const cells = document.querySelectorAll('.cell:not(.fixed)');
+            const emptyCells = Array.from(cells).filter(cell => cell.value === '');
+
+            if (emptyCells.length === 0) {
+                showTemporaryFeedback("A grade já está cheia! Verifique sua resposta. 😉", "info");
+                return;
+            }
+
+            // Seleciona uma célula vazia aleatória e preenche com o valor correto
+            const targetCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+            const idx = targetCell.getAttribute('data-index');
+            
+            targetCell.value = solution[idx];
+            targetCell.style.animation = "pulse 0.5s alternate 2";
+            
+            showTemporaryFeedback("Uma pista foi adicionada com carinho! 💡", "info");
+        }
+
+        function showTemporaryFeedback(text, type) {
+            const fb = document.getElementById('feedback-message');
+            fb.textContent = text;
+            fb.className = `feedback ${type}`;
+        }
+
+        function clearFeedback() {
+            const fb = document.getElementById('feedback-message');
+            fb.textContent = '';
+            fb.className = 'feedback';
+        }
+
+        // Recursos de Acessibilidade
+        function toggleTheme() {
+            playSound('click');
+            const body = document.body;
+            const currentTheme = body.getAttribute('data-theme');
+            if (currentTheme === 'dark') {
+                body.removeAttribute('data-theme');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+            }
+        }
+
+        function toggleTextSize() {
+            playSound('click');
+            document.body.classList.toggle('large-text');
+        }
+
+        // Inicia o app automaticamente ao carregar
+        window.onload = initGame;
+    </script>
+</body>
+</html>
